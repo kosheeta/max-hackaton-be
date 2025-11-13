@@ -60,7 +60,7 @@ async def rating_callback(event: MessageCallback):
             top_users.append((user, score))
 
         rating_lines = [
-            f'<b>{index}) {user.name}: {score}%</b>'
+            f'{index}) {user.name}: {score}%'
             for index, (user, score) in enumerate(top_users, start=1)
         ]
 
@@ -69,7 +69,7 @@ async def rating_callback(event: MessageCallback):
 
         await event.message.answer(
             'Рейтинг точности среди создателей доступных городов:\n\n'
-            f'<blockquote>{rating_text}</blockquote>\n\n'
+            f'<blockquote><b>{rating_text}</b></blockquote>\n\n'
             f'{place_text}'
         )
 
@@ -80,7 +80,7 @@ async def rating_callback(event: MessageCallback):
             attachments=[inline_keyboard.as_markup()]
         )
 
-    elif user_place == 0:
+    elif user_place <= 1:
         await event.message.answer(
             'Ты на вершине рейтинга! 🏆\n'
             'Продолжай в том же духе, чтобы удержать лидерство!',
@@ -113,7 +113,7 @@ async def next_challenge_callback(event: MessageCallback):
         attachments=[inline_keyboard.as_markup()]
     )
 
-    user.last_challenge_message_id = result.message.body.id
+    user.last_challenge_message_id = result.message.body.mid
     user.add()
 
     await event.message.delete()
