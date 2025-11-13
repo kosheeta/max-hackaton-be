@@ -34,7 +34,7 @@ async def start_bot(bot: Bot, dispatcher: Dispatcher):
     await dispatcher.start_polling(bot)
 
 
-async def get_app_link() -> str:
+async def get_app_url() -> str:
     bot_user = await get_bot().get_me()
     return f'https://max.ru/{bot_user.username}?startapp'
 
