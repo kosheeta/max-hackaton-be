@@ -81,6 +81,7 @@ async def continue_callback(event: MessageCallback):
             f'{place_text}'
         )
 
+    if not user_scores:
         await event.message.answer(
             'Рейтинг пока пуст! 🌟\n'
             'Будь первым, кто откроет все задания и станет лидером!',
