@@ -10,7 +10,7 @@ from sqlalchemy.sql.sqltypes import Float
 from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
-revision = 'VAOk9KDGsRzVlY6CDlm2gw'
+revision = 'VyOzeY9GPTK6EDehiRLQBA'
 down_revision = 'root'
 branch_labels = None
 depends_on = None
@@ -123,6 +123,11 @@ def upgrade() -> None:
             nullable=False,
         ),
         Column(
+            'last_completed_at',
+            DateTime(),
+            nullable=True,
+        ),
+        Column(
             'current_challenge_id',
             AutoString(),
             nullable=True,
@@ -213,15 +218,15 @@ schema = {
             Float(),
             nullable=False,
         ),
+        PrimaryKeyConstraint(
+            'id',
+        ),
         ForeignKeyConstraint(
             ['challenge_id'],
             [
                 'challenge.id',
             ],
             name='fk_challengeelement_challenge_id_challenge',
-        ),
-        PrimaryKeyConstraint(
-            'id',
         ),
     ),
     'user': Table(
@@ -257,6 +262,11 @@ schema = {
             'average_score',
             Float(),
             nullable=False,
+        ),
+        Column(
+            'last_completed_at',
+            DateTime(),
+            nullable=True,
         ),
         Column(
             'current_challenge_id',

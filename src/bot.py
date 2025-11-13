@@ -5,8 +5,9 @@ import urllib.parse
 
 from maxapi import Bot, Dispatcher
 from maxapi.enums.parse_mode import ParseMode
+from maxapi.types import Attachment
 from pydantic import BaseModel
-from rewire import config, simple_plugin, DependenciesModule
+from rewire import config, simple_plugin, DependenciesModule, logger
 
 from src.models import InitData
 
@@ -31,6 +32,22 @@ async def create_dispatcher() -> Dispatcher:
 @plugin.run()
 async def start_bot(bot: Bot, dispatcher: Dispatcher):
     await dispatcher.start_polling(bot)
+
+
+async def get_app_link() -> str:
+    bot_user = await get_bot().get_me()
+    return f'https://max.ru/{bot_user.username}?startapp'
+
+
+async def send_user_message(user_id: int, text: str, *attachments: Attachment):
+    try:
+        await get_bot().send_message(
+            user_id=user_id,
+            text=text,
+            attachments=[*attachments]
+        )
+    except Exception as e:
+        logger.error(f'Failed to send message to (user_id={user_id}): {e}')
 
 
 def parse_init_data(init_data_string: str) -> InitData:

@@ -1,4 +1,4 @@
-from datetime import datetime, time, date
+from datetime import datetime
 from typing import Optional, List
 
 from pydantic import BaseModel
@@ -24,14 +24,7 @@ class User(SQLModel, table=True):
 
     @property
     def next_challenge_ready(self) -> bool:
-        if not self.last_completed_at:
-            return True
-
-        today_reset_date = datetime.combine(date.today(), time(10, 0))
-        if self.last_completed_at < today_reset_date < datetime.now():
-            return True
-
-        return False
+        return not self.last_completed_at or self.last_completed_at.date() < datetime.now().date()
 
     @classmethod
     async def get(cls, user_id: int) -> Optional['User']:
@@ -76,7 +69,10 @@ class Challenge(SQLModel, table=True):
         return list(await cls.select().filter_by(**kwargs).all())
 
     @classmethod
-    async def get_next(cls, completed_ids: List[str]) -> Optional['Challenge']:
+    async def get_next(cls, completed_ids: Optional[List[str]] = None) -> Optional['Challenge']:
+        if not completed_ids:
+            return await cls.select().first()
+
         return await cls.select().where(cls.id.not_in(completed_ids)).first()
 
 

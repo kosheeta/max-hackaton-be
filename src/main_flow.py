@@ -2,12 +2,13 @@ from maxapi import Router, Dispatcher
 from maxapi.enums.intent import Intent
 from maxapi.filters.callback_payload import CallbackPayload
 from maxapi.filters.command import CommandStart
-from maxapi.types import MessageCreated, CallbackButton, MessageCallback
+from maxapi.types import MessageCreated, CallbackButton, MessageCallback, LinkButton
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 from rewire import simple_plugin
 from rewire_sqlmodel import transaction
 
 from src import redis
+from src.bot import get_app_link
 from src.models import User, Challenge
 
 plugin = simple_plugin()
@@ -18,7 +19,7 @@ class ContinuePayload(CallbackPayload, prefix='continue'):
     pass
 
 
-class NextChallengePayload(CallbackPayload, prefix='next_challenge'):
+class OpenChallengePayload(CallbackPayload, prefix='open_challenge'):
     pass
 
 
@@ -32,13 +33,11 @@ async def start_command(event: MessageCreated):
     )
 
     inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.add(
-        CallbackButton(
-            text='Да!',
-            payload=ContinuePayload().pack(),
-            intent=Intent.POSITIVE
-        )
-    )
+    inline_keyboard.add(CallbackButton(
+        text='Да!',
+        payload=ContinuePayload().pack(),
+        intent=Intent.POSITIVE
+    ))
 
     await event.message.answer(
         'Привет! Это игра <b>«Инклюзивный конструктор»</b> — здесь ты узнаешь, как сделать город удобным и доступным для всех. 🦮\n\n'
@@ -65,13 +64,11 @@ async def continue_callback(event: MessageCallback):
         rating_lines.append(f'<b>{index}) {user.name}: {score}%</b>')
 
     inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.add(
-        CallbackButton(
-            text='Вперёд!',
-            payload=NextChallengePayload().pack(),
-            intent=Intent.POSITIVE
-        )
-    )
+    inline_keyboard.add(CallbackButton(
+        text='Вперёд!',
+        payload=OpenChallengePayload().pack(),
+        intent=Intent.POSITIVE
+    ))
 
     rating_text = '\n'.join(rating_lines)
     place_text = f'Твоё место: {user_place + 1} 🎖️' if user_place is not None else ''
@@ -98,27 +95,21 @@ async def continue_callback(event: MessageCallback):
     await event.message.delete()
 
 
-@router.message_callback(NextChallengePayload.filter())
+@router.message_callback(OpenChallengePayload.filter())
 @transaction(1)
 async def next_challenge_callback(event: MessageCallback):
     user = await User.get(event.from_user.user_id)
-    completed_challenge_ids = await redis.get_user_completed_challenges(user.id)
-
-    next_challenge_available = False
     if not user.current_challenge:
-        next_challenge_available = True
-    elif user.next_challenge_ready:
-        last_score = await redis.get_user_challenge_score(user.id, user.current_challenge_id)
-        if last_score:
-            next_challenge_available = True
-
-    if next_challenge_available:
-        next_challenge = await Challenge.get_next(completed_challenge_ids)
-        if not next_challenge:
-            return
-
-        user.current_challenge = next_challenge
+        user.current_challenge = await Challenge.get_next()
         user.add()
+
+    inline_keyboard = InlineKeyboardBuilder()
+    inline_keyboard.add(LinkButton(text='Открыть', link=await get_app_link()))
+
+    await event.message.answer(
+        user.current_challenge.description,
+        attachments=[inline_keyboard.as_markup()]
+    )
 
     await event.message.delete()
 

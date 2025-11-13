@@ -1,18 +1,25 @@
+import asyncio
 from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, FastAPI, Depends, HTTPException
 from fastapi.security import APIKeyHeader
+from maxapi.enums.intent import Intent
+from maxapi.types import CallbackButton
+from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 from rewire import simple_plugin
 from rewire_fastapi import Dependable
 from rewire_sqlmodel import transaction
 
-from src import redis
+from src import redis, bot
 from src.bot import parse_init_data
+from src.main_flow import OpenChallengePayload
 from src.models import User, ChallengeResponse, ChallengeElementResponse, CompleteChallengeRequest, CompleteChallengeResponse
 
 plugin = simple_plugin()
 router = APIRouter()
+
+MAX_ERROR = 1000
 
 
 @Dependable
@@ -50,38 +57,51 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
     if not user.current_challenge:
         raise HTTPException(status_code=400, detail='No current challenge available!')
 
-    placed_elements = {element.id: element for element in request.placed_elements}
-    total_distance = 0.0
-
-    for element in user.current_challenge.elements:
-        if element.id not in placed_elements:
-            continue
-
-        user_element = placed_elements[element.id]
-        distance_x = abs(user_element.x - element.target_x)
-        distance_y = abs(user_element.y - element.target_y)
-        total_distance += distance_x + distance_y
-
-    MAX_ERROR = 1000
-    error_rate = min(total_distance / MAX_ERROR, 1.0)
-    success_rate = 1 - error_rate
-    final_score = round(success_rate * 100, 1)
-
     last_score = await redis.get_user_challenge_score(user.id, user.current_challenge_id)
     if not last_score:
         user.last_completed_at = datetime.now()
 
-    await redis.set_user_challenge_score(
-        user_id=user.id,
-        challenge_id=user.current_challenge_id,
-        score=final_score
+    placed_elements = {element.id: element for element in request.placed_elements}
+    total_error = sum(
+        abs(placed_elements[element.id].x - element.target_x) + abs(placed_elements[element.id].y - element.target_y)
+        for element in user.current_challenge.elements
+        if element.id in placed_elements
     )
+
+    final_score = round(max(0.0, 1 - min(total_error / MAX_ERROR, 1.0)) * 100, 1)
+    await redis.set_user_challenge_score(user.id, user.current_challenge_id, final_score)
 
     average_score = await redis.get_user_average_score(user.id)
     await redis.set_user_score(user.id, average_score)
 
     user.average_score = average_score
     user.add()
+
+    if final_score >= 90:
+        result_text = f'Невероятно! Твой город достиг {final_score}% доступности 🎉\nТы делаешь его по-настоящему дружелюбным!'
+    elif final_score >= 70:
+        result_text = f'Отлично! Город становится доступнее — уже {final_score}% 💪'
+    elif final_score >= 50:
+        result_text = f'Хорошо! Твой город достиг {final_score}% доступности, но есть куда расти 🔧'
+    else:
+        result_text = f'Первые шаги сделаны — {final_score}% доступности 🌱\nПопробуй завтра добиться большего!'
+
+    inline_keyboard = InlineKeyboardBuilder()
+    inline_keyboard.add(CallbackButton(
+        text='Вернуться к уровню',
+        payload=OpenChallengePayload().pack(),
+        intent=Intent.POSITIVE
+    ))
+
+    await bot.send_user_message(user.id, result_text)
+    await asyncio.sleep(1)
+
+    await bot.send_user_message(
+        user.id,
+        'Возвращайся завтра — тебя ждёт новая локация и новые вызовы!\n'
+        'Каждый день приближает тебя к городу без барьеров.',
+        inline_keyboard.as_markup()
+    )
 
     return CompleteChallengeResponse(ok=True)
 
