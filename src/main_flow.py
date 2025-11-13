@@ -15,7 +15,7 @@ plugin = simple_plugin()
 router = Router()
 
 
-class ContinuePayload(CallbackPayload, prefix='continue'):
+class RatingPayload(CallbackPayload, prefix='rating'):
     pass
 
 
@@ -33,11 +33,7 @@ async def start_command(event: MessageCreated):
     )
 
     inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.add(CallbackButton(
-        text='Да!',
-        payload=ContinuePayload().pack(),
-        intent=Intent.POSITIVE
-    ))
+    inline_keyboard.add(CallbackButton(text='Да!', payload=RatingPayload().pack(), intent=Intent.POSITIVE))
 
     await event.message.answer(
         'Привет! Это игра <b>«Инклюзивный конструктор»</b> — здесь ты узнаешь, как сделать город удобным и доступным для всех. 🦮\n\n'
@@ -48,18 +44,14 @@ async def start_command(event: MessageCreated):
     )
 
 
-@router.message_callback(ContinuePayload.filter())
+@router.message_callback(RatingPayload.filter())
 @transaction(1)
-async def continue_callback(event: MessageCallback):
+async def rating_callback(event: MessageCallback):
     user_scores = await redis.get_scores_leaderboard(limit=5)
     user_place = await redis.get_user_place(event.from_user.user_id)
 
     inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.add(CallbackButton(
-        text='Вперёд!',
-        payload=OpenChallengePayload().pack(),
-        intent=Intent.POSITIVE
-    ))
+    inline_keyboard.add(CallbackButton(text='Вперёд!', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
 
     if user_scores:
         top_users = []
@@ -116,10 +108,13 @@ async def next_challenge_callback(event: MessageCallback):
     inline_keyboard = InlineKeyboardBuilder()
     inline_keyboard.add(LinkButton(text='Открыть', url=await get_app_url()))
 
-    await event.message.answer(
+    result = await event.message.answer(
         user.current_challenge.description,
         attachments=[inline_keyboard.as_markup()]
     )
+
+    user.last_challenge_message_id = result.message.body.id
+    user.add()
 
     await event.message.delete()
 

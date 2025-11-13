@@ -15,11 +15,7 @@ plugin = simple_plugin()
 @transaction(1)
 async def send_challenge_notifications():
     inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.add(CallbackButton(
-        text='Вперёд!',
-        payload=OpenChallengePayload().pack(),
-        intent=Intent.POSITIVE
-    ))
+    inline_keyboard.add(CallbackButton(text='Вперёд!', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
 
     for user in await User.get_all():
         if not user.current_challenge_id or not user.next_challenge_ready:

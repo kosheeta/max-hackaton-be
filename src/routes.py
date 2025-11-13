@@ -13,7 +13,7 @@ from rewire_sqlmodel import transaction
 
 from src import redis, bot
 from src.bot import parse_init_data
-from src.main_flow import OpenChallengePayload
+from src.main_flow import OpenChallengePayload, RatingPayload
 from src.models import User, ChallengeResponse, ChallengeElementResponse, CompleteChallengeRequest, CompleteChallengeResponse
 
 plugin = simple_plugin()
@@ -87,11 +87,8 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
         result_text = f'Первые шаги сделаны — {final_score}% доступности 🌱\nПопробуй завтра добиться большего!'
 
     inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.add(CallbackButton(
-        text='Вернуться к уровню',
-        payload=OpenChallengePayload().pack(),
-        intent=Intent.POSITIVE
-    ))
+    inline_keyboard.add(CallbackButton(text='Перейти к рейтингу', payload=RatingPayload().pack(), intent=Intent.POSITIVE))
+    inline_keyboard.add(CallbackButton(text='Вернуться к уровню', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
 
     await bot.send_user_message(user.id, result_text)
     await asyncio.sleep(1)
@@ -102,6 +99,11 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
         'Каждый день приближает тебя к городу без барьеров.',
         inline_keyboard.as_markup()
     )
+
+    if user.last_challenge_message_id:
+        await bot.delete_user_message(user.last_challenge_message_id)
+        user.last_challenge_message_id = None
+        user.add()
 
     return CompleteChallengeResponse(ok=True)
 

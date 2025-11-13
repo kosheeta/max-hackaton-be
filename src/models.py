@@ -16,6 +16,7 @@ class User(SQLModel, table=True):
     avatar_url: Optional[str]
     average_score: float = 0.0
     last_completed_at: Optional[datetime] = None
+    last_challenge_message_id: Optional[str] = None
 
     current_challenge_id: Optional[str] = Field(default=None, foreign_key='challenge.id')
     current_challenge: Optional['Challenge'] = Relationship(

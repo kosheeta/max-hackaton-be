@@ -41,13 +41,13 @@ async def get_app_url() -> str:
 
 async def send_user_message(user_id: int, text: str, *attachments: Attachment):
     try:
-        await get_bot().send_message(
-            user_id=user_id,
-            text=text,
-            attachments=[*attachments]
-        )
+        await get_bot().send_message(user_id=user_id, text=text, attachments=[*attachments])
     except Exception as e:
-        logger.error(f'Failed to send message to (user_id={user_id}): {e}')
+        logger.error(f'Failed to send message (user_id={user_id}): {e}')
+
+
+async def delete_user_message(message_id: str):
+    await get_bot().delete_message(message_id)
 
 
 def parse_init_data(init_data_string: str) -> InitData:
