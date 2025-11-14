@@ -36,7 +36,7 @@ class User(SQLModel, table=True):
         return list(await cls.select().filter_by(**kwargs).all())
 
     @classmethod
-    @transaction(1)
+    @transaction(0)
     async def get_or_create(cls, user_id: int, **kwargs) -> 'User':
         return await cls.get(user_id) or cls(id=user_id, **kwargs).add()
 
@@ -94,8 +94,8 @@ class InitDataChat(BaseModel):
 class InitData(BaseModel):
     auth_date: int
     query_id: str
-    user: InitDataUser
-    chat: InitDataChat
+    user: Optional[InitDataUser] = None
+    chat: Optional[InitDataChat] = None
     hash: str
     ip: str
 

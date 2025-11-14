@@ -24,10 +24,13 @@ MAX_ERROR = 1000
 
 
 @Dependable
-@transaction(1)
+@transaction(0)
 async def user_dependency(init_data_str: Annotated[str, Depends(APIKeyHeader(name='X-Init-Data'))]) -> Optional[User]:
-    init_data = parse_init_data_unsafe(init_data_str)
-    validate_init_data(init_data, Config.token)
+    try:
+        init_data = parse_init_data_unsafe(init_data_str)
+        validate_init_data(init_data, Config.token)
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail='Invalid init data!') from e
 
     if not init_data.user:
         raise HTTPException(status_code=401, detail='No user in the init data!')
@@ -40,7 +43,7 @@ async def user_dependency(init_data_str: Annotated[str, Depends(APIKeyHeader(nam
 
 
 @router.get('/api/challenges', response_model=ChallengeResponse)
-@transaction(1)
+@transaction(0)
 async def get_challenge(user: user_dependency.Result) -> ChallengeResponse:
     if not user.current_challenge:
         raise HTTPException(status_code=400, detail='No current challenge available!')
@@ -55,7 +58,7 @@ async def get_challenge(user: user_dependency.Result) -> ChallengeResponse:
 
 
 @router.post('/api/challenges/complete', response_model=CompleteChallengeResponse)
-@transaction(1)
+@transaction(0)
 async def complete_challenge(request: CompleteChallengeRequest, user: user_dependency.Result):
     if not user.current_challenge:
         raise HTTPException(status_code=400, detail='No current challenge available!')

@@ -12,7 +12,7 @@ from src.models import User, Challenge
 plugin = simple_plugin()
 
 
-@transaction(1)
+@transaction(0)
 async def send_challenge_notifications():
     inline_keyboard = InlineKeyboardBuilder()
     inline_keyboard.add(CallbackButton(text='Вперёд!', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))

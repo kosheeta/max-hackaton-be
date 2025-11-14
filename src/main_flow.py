@@ -45,7 +45,7 @@ async def start_command(event: MessageCreated):
 
 
 @router.message_callback(RatingPayload.filter())
-@transaction(1)
+@transaction(0)
 async def rating_callback(event: MessageCallback):
     user_scores = await redis.get_scores_leaderboard(limit=5)
     user_place = await redis.get_user_place(event.from_user.user_id)
@@ -100,7 +100,7 @@ async def rating_callback(event: MessageCallback):
 
 
 @router.message_callback(OpenChallengePayload.filter())
-@transaction(1)
+@transaction(0)
 async def next_challenge_callback(event: MessageCallback):
     user = await User.get(event.from_user.user_id)
     if not user.current_challenge:
