@@ -111,16 +111,14 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
             inline_keyboard.as_markup()
         )
     else:
-        upload_result = await bot.upload_image('assets/certificate.png')
-        logger.info(upload_result)
-
+        payload = await bot.upload_image('assets/certificate.png')
         await bot.send_user_message(
             user.id,
             'Ты — настоящий гений доступности!\n'
             'Твой город теперь открыт для всех — и это твоя заслуга.\n'
             'Вот твой сертификат создателя доступного города 👇',
             Image(
-                payload=json.loads(upload_result),
+                payload=payload,
                 type=AttachmentType.IMAGE
             )
         )
