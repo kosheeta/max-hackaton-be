@@ -1,9 +1,11 @@
 import asyncio
+import json
 from datetime import datetime
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, FastAPI, Depends, HTTPException
 from fastapi.security import APIKeyHeader
+from maxapi.enums.attachment import AttachmentType
 from maxapi.enums.intent import Intent
 from maxapi.types import CallbackButton
 from maxapi.types.attachments import Image
@@ -116,7 +118,8 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
             'Твой город теперь открыт для всех — и это твоя заслуга.\n'
             'Вот твой сертификат создателя доступного города 👇',
             Image(
-                payload=upload_result
+                payload=json.loads(upload_result),
+                type=AttachmentType.IMAGE
             )
         )
 
