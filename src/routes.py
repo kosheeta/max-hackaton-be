@@ -1,5 +1,4 @@
 import asyncio
-import json
 from datetime import datetime
 from typing import Annotated, Optional
 
@@ -10,7 +9,7 @@ from maxapi.enums.intent import Intent
 from maxapi.types import CallbackButton
 from maxapi.types.attachments import Image
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
-from rewire import simple_plugin, logger
+from rewire import simple_plugin
 from rewire_fastapi import Dependable
 from rewire_sqlmodel import transaction
 
@@ -95,15 +94,15 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
     else:
         result_text = f'Первые шаги сделаны — {final_score}% доступности 🌱\nПопробуй завтра добиться большего!'
 
-    inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.row(CallbackButton(text='Перейти к рейтингу', payload=RatingPayload().pack(), intent=Intent.POSITIVE))
-    inline_keyboard.row(CallbackButton(text='Вернуться к уровню', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
-
     await bot.send_user_message(user.id, result_text)
     await asyncio.sleep(1)
 
+    inline_keyboard = InlineKeyboardBuilder()
+    inline_keyboard.row(CallbackButton(text='Перейти к рейтингу', payload=RatingPayload().pack(), intent=Intent.POSITIVE))
+
     completed_ids = await redis.get_user_completed_challenges(user.id)
     if await Challenge.get_next(completed_ids):
+        inline_keyboard.row(CallbackButton(text='Вернуться к уровню', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
         await bot.send_user_message(
             user.id,
             'Возвращайся завтра — тебя ждёт новая локация и новые вызовы!\n'
@@ -117,6 +116,7 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
             'Ты — настоящий гений доступности!\n'
             'Твой город теперь открыт для всех — и это твоя заслуга.\n'
             'Вот твой сертификат создателя доступного города 👇',
+            inline_keyboard.as_markup(),
             Image(
                 payload=payload,
                 type=AttachmentType.IMAGE
