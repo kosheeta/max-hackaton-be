@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, FastAPI, Depends, HTTPException
+from fastapi import APIRouter, FastAPI, Depends, HTTPException, BackgroundTasks
 from fastapi.security import APIKeyHeader
 from maxapi.enums.attachment import AttachmentType
 from maxapi.enums.intent import Intent
@@ -61,7 +61,7 @@ async def get_challenge(user: user_dependency.Result) -> ChallengeResponse:
 
 @router.post('/api/challenges/complete', response_model=CompleteChallengeResponse)
 @transaction(0)
-async def complete_challenge(request: CompleteChallengeRequest, user: user_dependency.Result):
+async def complete_challenge(request: CompleteChallengeRequest, user: user_dependency.Result, background_tasks: BackgroundTasks):
     if not user.current_challenge:
         raise HTTPException(status_code=400, detail='No current challenge available!')
 
@@ -85,24 +85,34 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
     user.average_score = average_score
     user.add()
 
-    if final_score >= 90:
-        result_text = f'Невероятно! Твой город достиг {final_score}% доступности 🎉\nТы делаешь его по-настоящему дружелюбным!'
-    elif final_score >= 70:
-        result_text = f'Отлично! Город становится доступнее — уже {final_score}% 💪'
-    elif final_score >= 50:
-        result_text = f'Хорошо! Твой город достиг {final_score}% доступности, но есть куда расти 🔧'
+    background_tasks.add_task(
+        send_complete_challenge_message,
+        user, final_score
+    )
+
+    return CompleteChallengeResponse(ok=True)
+
+
+@transaction(0)
+async def send_complete_challenge_message(user: User, score: float):
+    if score >= 90:
+        result_text = f'Невероятно! Твой город достиг {score}% доступности 🎉\nТы делаешь его по-настоящему дружелюбным!'
+    elif score >= 70:
+        result_text = f'Отлично! Город становится доступнее — уже {score}% 💪'
+    elif score >= 50:
+        result_text = f'Хорошо! Твой город достиг {score}% доступности, но есть куда расти 🔧'
     else:
-        result_text = f'Первые шаги сделаны — {final_score}% доступности 🌱\nПопробуй завтра добиться большего!'
+        result_text = f'Первые шаги сделаны — {score}% доступности 🌱\nПопробуй завтра добиться большего!'
 
     await bot.send_user_message(user.id, result_text)
-    await asyncio.sleep(1)
+    await asyncio.sleep(3)
 
     inline_keyboard = InlineKeyboardBuilder()
     inline_keyboard.row(CallbackButton(text='Перейти к рейтингу', payload=RatingPayload().pack(), intent=Intent.POSITIVE))
+    inline_keyboard.row(CallbackButton(text='Вернуться к уровню', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
 
     completed_ids = await redis.get_user_completed_challenges(user.id)
     if await Challenge.get_next(completed_ids):
-        inline_keyboard.row(CallbackButton(text='Вернуться к уровню', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
         await bot.send_user_message(
             user.id,
             'Возвращайся завтра — тебя ждёт новая локация и новые вызовы!\n'
@@ -115,8 +125,7 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
             user.id,
             'Ты — настоящий гений доступности!\n'
             'Твой город теперь открыт для всех — и это твоя заслуга.\n'
-            'Вот твой сертификат создателя доступного города 👇',
-            inline_keyboard.as_markup(),
+            'Вот твой сертификат создателя доступного города ☝️',
             Image(
                 payload=payload,
                 type=AttachmentType.IMAGE
@@ -127,8 +136,6 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
         await bot.delete_user_message(user.last_challenge_message_id)
         user.last_challenge_message_id = None
         user.add()
-
-    return CompleteChallengeResponse(ok=True)
 
 
 @plugin.setup()
