@@ -20,7 +20,7 @@ class User(SQLModel, table=True):
 
     current_challenge_id: Optional[str] = Field(default=None, foreign_key='challenge.id')
     current_challenge: Optional['Challenge'] = Relationship(
-        sa_relationship_kwargs={'lazy': 'joined'}
+        sa_relationship_kwargs={'lazy': 'selectin'}
     )
 
     @property
@@ -64,10 +64,6 @@ class Challenge(SQLModel, table=True):
     @classmethod
     async def get_by_id(cls, challenge_id: str) -> Optional['Challenge']:
         return await cls.select().where(cls.id == challenge_id).first()
-
-    @classmethod
-    async def get_all(cls, **kwargs) -> List['Challenge']:
-        return list(await cls.select().filter_by(**kwargs).all())
 
     @classmethod
     async def get_next(cls, completed_ids: Optional[List[str]] = None) -> Optional['Challenge']:
