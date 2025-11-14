@@ -2,7 +2,10 @@ import hashlib
 import hmac
 import json
 
+import pytest
+
 from src.models import InitData
+from src.utils import validate_init_data
 
 
 def generate_valid_init_data(bot_token: str) -> InitData:
@@ -11,15 +14,14 @@ def generate_valid_init_data(bot_token: str) -> InitData:
         'query_id': '123',
         'user': {
             'id': 1,
-            'username': 'test',
             'first_name': 'Test',
             'last_name': 'User',
+            'username': 'test',
             'language_code': 'en',
             'photo_url': 'http://example.com/avatar.jpg'
         },
         'chat': {
             'id': 2,
-            'title': 'Test Chat',
             'type': 'private'
         },
         'ip': '127.0.0.1',
@@ -51,5 +53,25 @@ def generate_valid_init_data(bot_token: str) -> InitData:
     print(raw_data)
 
 
+    return InitData(**raw_data)
 
-print(generate_valid_init_data('test'))
+
+def test_validate_init_data_success():
+    bot_token = 'TEST_BOT_TOKEN'
+    init_data = generate_valid_init_data(bot_token)
+
+
+
+
+
+
+    validate_init_data(init_data, bot_token)
+
+
+def test_validate_init_data_fail():
+    bot_token = 'TEST_BOT_TOKEN'
+    init_data = generate_valid_init_data(bot_token)
+    init_data.hash = 'WRONGHASH'
+
+    with pytest.raises(ValueError):
+        validate_init_data(init_data, bot_token)

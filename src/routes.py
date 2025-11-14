@@ -12,9 +12,10 @@ from rewire_fastapi import Dependable
 from rewire_sqlmodel import transaction
 
 from src import redis, bot
-from src.bot import parse_init_data
+from src.bot import Config
 from src.main_flow import OpenChallengePayload, RatingPayload
 from src.models import User, ChallengeResponse, ChallengeElementResponse, CompleteChallengeRequest, CompleteChallengeResponse
+from src.utils import parse_init_data_unsafe, validate_init_data
 
 plugin = simple_plugin()
 router = APIRouter()
@@ -25,7 +26,9 @@ MAX_ERROR = 1000
 @Dependable
 @transaction(1)
 async def user_dependency(init_data_str: Annotated[str, Depends(APIKeyHeader(name='X-Init-Data'))]) -> Optional[User]:
-    init_data = parse_init_data(init_data_str)
+    init_data = parse_init_data_unsafe(init_data_str)
+    validate_init_data(init_data, Config.token)
+
     if not init_data.user:
         raise HTTPException(status_code=401, detail='No user in the init data!')
 
@@ -87,8 +90,8 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
         result_text = f'Первые шаги сделаны — {final_score}% доступности 🌱\nПопробуй завтра добиться большего!'
 
     inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.add(CallbackButton(text='Перейти к рейтингу', payload=RatingPayload().pack(), intent=Intent.POSITIVE))
-    inline_keyboard.add(CallbackButton(text='Вернуться к уровню', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
+    inline_keyboard.row(CallbackButton(text='Перейти к рейтингу', payload=RatingPayload().pack(), intent=Intent.POSITIVE))
+    inline_keyboard.row(CallbackButton(text='Вернуться к уровню', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
 
     await bot.send_user_message(user.id, result_text)
     await asyncio.sleep(1)

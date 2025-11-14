@@ -8,8 +8,8 @@ from rewire import simple_plugin
 from rewire_sqlmodel import transaction
 
 from src import redis
-from src.bot import get_app_url
 from src.models import User, Challenge
+from src.utils import create_app_url
 
 plugin = simple_plugin()
 router = Router()
@@ -51,48 +51,50 @@ async def rating_callback(event: MessageCallback):
     user_place = await redis.get_user_place(event.from_user.user_id)
 
     inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.add(CallbackButton(text='Вперёд!', payload=OpenChallengePayload().pack(), intent=Intent.POSITIVE))
+    inline_keyboard.add(
+        CallbackButton(
+            text='Вперёд!',
+            payload=OpenChallengePayload().pack(),
+            intent=Intent.POSITIVE
+        )
+    )
 
+    rating_text_parts = []
     if user_scores:
         top_users = []
         for user_id, score in user_scores.items():
             user = await User.get(user_id)
             top_users.append((user, score))
 
-        rating_lines = [
+        rating_text = '\n'.join(
             f'{index}) {user.name}: {score}%'
             for index, (user, score) in enumerate(top_users, start=1)
-        ]
-
-        rating_text = '\n'.join(rating_lines)
-        place_text = f'Твоё место: {user_place + 1} 🎖️' if user_place is not None else ''
-
-        await event.message.answer(
-            'Рейтинг точности среди создателей доступных городов:\n\n'
-            f'<blockquote><b>{rating_text}</b></blockquote>\n\n'
-            f'{place_text}'
         )
 
-    if not user_scores:
-        await event.message.answer(
-            'Рейтинг пока пуст! 🌟\n'
-            'Будь первым, кто откроет все задания и станет лидером!',
-            attachments=[inline_keyboard.as_markup()]
-        )
+        rating_text_parts.append('Рейтинг точности среди создателей доступных городов:\n')
+        rating_text_parts.append(f'<blockquote>{rating_text}</blockquote>\n')
 
-    elif user_place <= 1:
-        await event.message.answer(
-            'Ты на вершине рейтинга! 🏆\n'
-            'Продолжай в том же духе, чтобы удержать лидерство!',
-            attachments=[inline_keyboard.as_markup()]
-        )
+        if user_place is not None:
+            rating_text_parts.append(f'Твоё место: {user_place + 1} 🎖️\n')
+            if user_place <= 1:
+                rating_text_parts.append('Ты на вершине рейтинга! 🏆\nПродолжай в том же духе!')
+            else:
+                rating_text_parts.append(
+                    'Всё ещё можно догнать лидеров!\n'
+                    'Хочешь перейти к первому заданию и подняться в рейтинге?'
+                )
 
     else:
-        await event.message.answer(
-            'Всё ещё можно догнать лидеров!\n'
-            'Хочешь перейти к первому заданию и подняться в рейтинге?',
-            attachments=[inline_keyboard.as_markup()]
+        rating_text_parts.append(
+            'Рейтинг пока пуст! 🌟\n'
+            'Будь первым, кто откроет все задания и станет лидером!'
         )
+
+    rating_text = '\n'.join(rating_text_parts)
+    await event.message.answer(
+        rating_text,
+        attachments=[inline_keyboard.as_markup()]
+    )
 
     await event.message.delete()
 
@@ -106,7 +108,7 @@ async def next_challenge_callback(event: MessageCallback):
         user.add()
 
     inline_keyboard = InlineKeyboardBuilder()
-    inline_keyboard.add(LinkButton(text='Открыть', url=await get_app_url()))
+    inline_keyboard.add(LinkButton(text='Открыть', url=create_app_url(event.bot.me.username)))
 
     result = await event.message.answer(
         user.current_challenge.description,
