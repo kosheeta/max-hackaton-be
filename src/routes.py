@@ -133,6 +133,7 @@ async def send_complete_challenge_message(user: User, score: float):
         )
 
     if user.last_challenge_message_id:
+        await asyncio.sleep(1)
         await bot.delete_user_message(user.last_challenge_message_id)
         user.last_challenge_message_id = None
         user.add()
