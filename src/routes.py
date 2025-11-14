@@ -10,7 +10,7 @@ from maxapi.enums.intent import Intent
 from maxapi.types import CallbackButton
 from maxapi.types.attachments import Image
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
-from rewire import simple_plugin
+from rewire import simple_plugin, logger
 from rewire_fastapi import Dependable
 from rewire_sqlmodel import transaction
 
@@ -112,6 +112,8 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
         )
     else:
         upload_result = await bot.upload_image('assets/certificate.png')
+        logger.info(upload_result)
+
         await bot.send_user_message(
             user.id,
             'Ты — настоящий гений доступности!\n'
