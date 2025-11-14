@@ -6,6 +6,7 @@ from fastapi import APIRouter, FastAPI, Depends, HTTPException
 from fastapi.security import APIKeyHeader
 from maxapi.enums.intent import Intent
 from maxapi.types import CallbackButton
+from maxapi.types.attachments import Image
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 from rewire import simple_plugin
 from rewire_fastapi import Dependable
@@ -14,7 +15,7 @@ from rewire_sqlmodel import transaction
 from src import redis, bot
 from src.bot import Config
 from src.main_flow import OpenChallengePayload, RatingPayload
-from src.models import User, ChallengeResponse, ChallengeElementResponse, CompleteChallengeRequest, CompleteChallengeResponse
+from src.models import User, ChallengeResponse, ChallengeElementResponse, CompleteChallengeRequest, CompleteChallengeResponse, Challenge
 from src.utils import parse_init_data_unsafe, validate_init_data
 
 plugin = simple_plugin()
@@ -99,12 +100,25 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
     await bot.send_user_message(user.id, result_text)
     await asyncio.sleep(1)
 
-    await bot.send_user_message(
-        user.id,
-        'Возвращайся завтра — тебя ждёт новая локация и новые вызовы!\n'
-        'Каждый день приближает тебя к городу без барьеров.',
-        inline_keyboard.as_markup()
-    )
+    completed_ids = await redis.get_user_completed_challenges(user.id)
+    if await Challenge.get_next(completed_ids):
+        await bot.send_user_message(
+            user.id,
+            'Возвращайся завтра — тебя ждёт новая локация и новые вызовы!\n'
+            'Каждый день приближает тебя к городу без барьеров.',
+            inline_keyboard.as_markup()
+        )
+    else:
+        upload_result = await bot.upload_image('assets/certificate.png')
+        await bot.send_user_message(
+            user.id,
+            'Ты — настоящий гений доступности!\n'
+            'Твой город теперь открыт для всех — и это твоя заслуга.\n'
+            'Вот твой сертификат создателя доступного города 👇',
+            Image(
+                payload=upload_result
+            )
+        )
 
     if user.last_challenge_message_id:
         await bot.delete_user_message(user.last_challenge_message_id)
