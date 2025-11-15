@@ -36,7 +36,8 @@ async def send_challenge_notifications():
         await session_context.get().commit()
         await bot.send_user_message(
             user.id,
-            'Доброе утро! Сегодня тебя ждёт новая локация. Готов продолжить строить город без барьеров?',
+            'Доброе утро! Сегодня тебя ждёт новая локация.\n'
+            'Готов продолжить строить город без барьеров?',
             inline_keyboard.as_markup()
         )
 
