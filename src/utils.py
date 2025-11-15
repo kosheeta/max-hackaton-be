@@ -51,3 +51,7 @@ def validate_init_data(init_data: InitData, bot_token: str):
 
     if calculated_hash != init_data.hash:
         raise ValueError(f'Invalid init data: {calculated_hash} | {init_data.hash}!')
+
+
+def create_certificate_image(user_name: str, user_score: float) -> str:
+    pass

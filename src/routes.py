@@ -17,7 +17,7 @@ from src import redis, bot
 from src.bot import Config
 from src.main_flow import OpenChallengePayload, RatingPayload
 from src.models import User, ChallengeResponse, ChallengeElementResponse, CompleteChallengeRequest, CompleteChallengeResponse, Challenge
-from src.utils import parse_init_data_unsafe, validate_init_data
+from src.utils import parse_init_data_unsafe, validate_init_data, create_certificate_image
 
 plugin = simple_plugin()
 router = APIRouter()
@@ -134,7 +134,7 @@ async def send_complete_challenge_message(user: User, score: float):
             user.received_certificate = True
             user.add()
 
-            payload = await bot.upload_image('assets/certificate.png')
+            payload = await bot.upload_image(create_certificate_image(user.name, user.average_score))
             await bot.send_user_message(
                 user.id,
                 'Ты — настоящий гений доступности!\n'
