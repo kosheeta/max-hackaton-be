@@ -1,4 +1,5 @@
 import asyncio
+import math
 from datetime import datetime
 from typing import Annotated, Optional
 
@@ -23,6 +24,7 @@ plugin = simple_plugin()
 router = APIRouter()
 
 MAX_ERROR = 1000
+SOFT_K = MAX_ERROR / 2
 
 
 @Dependable
@@ -76,12 +78,13 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
 
     placed_elements = {element.id: element for element in request.placed_elements}
     total_error = sum(
-        abs(placed_elements[element.id].x - element.target_x) + abs(placed_elements[element.id].y - element.target_y)
+        abs(placed_elements[element.id].x - element.target_x) +
+        abs(placed_elements[element.id].y - element.target_y)
         for element in user.current_challenge.elements
         if element.id in placed_elements
     )
 
-    final_score = round(max(0.0, 1 - min(total_error / MAX_ERROR, 1.0)) * 100, 1)
+    final_score = round(100 * math.exp(-total_error / SOFT_K), 1)
     if not current_score or current_score <= final_score:
         await redis.set_user_challenge_score(user.id, user.current_challenge_id, final_score)
 
@@ -101,11 +104,11 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
 
 @transaction(0)
 async def send_complete_challenge_message(user: User, score: float):
-    if score >= 90:
+    if score >= 80:
         result_text = f'Невероятно! Твой город достиг {score}% доступности 🎉\nТы делаешь его по-настоящему дружелюбным!'
-    elif score >= 70:
+    elif score >= 60:
         result_text = f'Отлично! Город становится доступнее — уже {score}% 💪'
-    elif score >= 50:
+    elif score >= 40:
         result_text = f'Хорошо! Твой город достиг {score}% доступности, но есть куда расти 🔧'
     else:
         result_text = f'Первые шаги сделаны — {score}% доступности 🌱\nПопробуй завтра добиться большего!'

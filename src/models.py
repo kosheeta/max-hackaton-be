@@ -26,7 +26,7 @@ class User(SQLModel, table=True):
 
     @property
     def next_challenge_ready(self) -> bool:
-        return not self.last_completed_at or self.last_completed_at.date() <= datetime.now().date()
+        return not self.last_completed_at or self.last_completed_at.date() < datetime.now().date()
 
     @classmethod
     async def get(cls, user_id: int) -> Optional['User']:
