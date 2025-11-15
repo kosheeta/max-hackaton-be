@@ -10,7 +10,7 @@ from maxapi.enums.intent import Intent
 from maxapi.types import CallbackButton
 from maxapi.types.attachments import Image
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
-from rewire import simple_plugin
+from rewire import simple_plugin, logger
 from rewire_fastapi import Dependable
 from rewire_sqlmodel import transaction
 
@@ -83,6 +83,9 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
         for element in user.current_challenge.elements
         if element.id in placed_elements
     )
+
+    for element in user.current_challenge.elements:
+        logger.info(f'{element.target_x},{element.target_y} | {placed_elements[element.id].x},{placed_elements[element.id].y}')
 
     final_score = round(100 * math.exp(-total_error / SOFT_K), 1)
     if not current_score or current_score <= final_score:
