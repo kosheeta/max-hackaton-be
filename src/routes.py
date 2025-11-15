@@ -1,5 +1,4 @@
 import asyncio
-import math
 from datetime import datetime
 from typing import Annotated, Optional
 
@@ -86,7 +85,7 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
     for element in user.current_challenge.elements:
         logger.info(f'{element.target_x},{element.target_y} | {placed_elements[element.id].x},{placed_elements[element.id].y}')
 
-    final_score = round(100 * math.exp(-total_error / MAX_ERROR * 0.8), 1)
+    final_score = round(max(0.0, 1 - min(total_error / MAX_ERROR, 1.0)) * 100, 1)
     if not current_score or current_score <= final_score:
         await redis.set_user_challenge_score(user.id, user.current_challenge_id, final_score)
 
