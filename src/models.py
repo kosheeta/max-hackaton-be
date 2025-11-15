@@ -3,7 +3,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel
 from rewire_sqlmodel import SQLModel, transaction
-from sqlalchemy import BigInteger, Column
+from sqlalchemy import BigInteger
 from sqlmodel import Field, Relationship
 
 
@@ -76,7 +76,7 @@ class Challenge(SQLModel, table=True):
 
 
 class Mailing(SQLModel, table=True):
-    id: int = Field(sa_column=Column(primary_key=True, autoincrement=True))
+    id: int = Field(primary_key=True, sa_column_kwargs={'autoincrement': True})
     send_at: datetime
     message_text: str
     button_text: str
