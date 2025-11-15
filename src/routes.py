@@ -65,9 +65,14 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
     if not user.current_challenge:
         raise HTTPException(status_code=400, detail='No current challenge available!')
 
-    last_score = await redis.get_user_challenge_score(user.id, user.current_challenge_id)
-    if not last_score:
+    current_score = await redis.get_user_challenge_score(user.id, user.current_challenge_id)
+    if not current_score:
         user.last_completed_at = datetime.now()
+
+    if user.last_challenge_message_id:
+        await asyncio.sleep(1)
+        await bot.delete_user_message(user.last_challenge_message_id)
+        user.last_challenge_message_id = None
 
     placed_elements = {element.id: element for element in request.placed_elements}
     total_error = sum(
@@ -77,7 +82,8 @@ async def complete_challenge(request: CompleteChallengeRequest, user: user_depen
     )
 
     final_score = round(max(0.0, 1 - min(total_error / MAX_ERROR, 1.0)) * 100, 1)
-    await redis.set_user_challenge_score(user.id, user.current_challenge_id, final_score)
+    if not current_score or current_score <= final_score:
+        await redis.set_user_challenge_score(user.id, user.current_challenge_id, final_score)
 
     average_score = await redis.get_user_average_score(user.id)
     await redis.set_user_score(user.id, average_score)
@@ -120,23 +126,30 @@ async def send_complete_challenge_message(user: User, score: float):
             inline_keyboard.as_markup()
         )
     else:
-        payload = await bot.upload_image('assets/certificate.png')
+        if not user.received_certificate:
+            user.received_certificate = True
+            user.add()
+
+            payload = await bot.upload_image('assets/certificate.png')
+            await bot.send_user_message(
+                user.id,
+                'Ты — настоящий гений доступности!\n'
+                'Твой город теперь открыт для всех — и это твоя заслуга.\n'
+                'Вот твой сертификат создателя доступного города ☝️',
+                Image(
+                    payload=payload,
+                    type=AttachmentType.IMAGE
+                )
+            )
+
+        await asyncio.sleep(3)
         await bot.send_user_message(
             user.id,
-            'Ты — настоящий гений доступности!\n'
-            'Твой город теперь открыт для всех — и это твоя заслуга.\n'
-            'Вот твой сертификат создателя доступного города ☝️',
-            Image(
-                payload=payload,
-                type=AttachmentType.IMAGE
-            )
+            'Уровней больше нет — ты прошёл все доступные испытания! 🎉\n'
+            'Но не расслабляйся — иногда здесь появляются новые локации, задания и полезные обновления.\n'
+            'Заглядывай время от времени, чтобы не пропустить самое интересное!',
+            inline_keyboard.as_markup()
         )
-
-    if user.last_challenge_message_id:
-        await asyncio.sleep(1)
-        await bot.delete_user_message(user.last_challenge_message_id)
-        user.last_challenge_message_id = None
-        user.add()
 
 
 @plugin.setup()
