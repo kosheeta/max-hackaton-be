@@ -4,7 +4,7 @@ from sqlalchemy.sql.schema import ForeignKeyConstraint
 from sqlalchemy.sql.schema import MetaData
 from sqlalchemy.sql.schema import PrimaryKeyConstraint
 from sqlalchemy.sql.schema import Table
-from sqlalchemy.sql.sqltypes import BigInteger
+from sqlalchemy.sql.sqltypes import BigInteger, Integer
 from sqlalchemy.sql.sqltypes import Boolean
 from sqlalchemy.sql.sqltypes import DateTime
 from sqlalchemy.sql.sqltypes import Float
@@ -33,7 +33,7 @@ def upgrade() -> None:
         'mailing',
         Column(
             'id',
-            NullType(),
+            Integer(),
             primary_key=True,
             nullable=False,
         ),
