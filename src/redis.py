@@ -59,3 +59,9 @@ async def get_user_average_score(user_id: int) -> float:
 
     scores = [float(score) for score in user_scores]
     return round(sum(scores) / len(scores), 1) if user_scores else 0.0
+
+
+async def set_user_mailing_sent(user_id: int, mailing_id: int) -> bool:
+    redis = get_redis()
+    was_sent = await redis.set(f'user:{user_id}:mailing:{mailing_id}', '1', get=True)
+    return was_sent == '1'

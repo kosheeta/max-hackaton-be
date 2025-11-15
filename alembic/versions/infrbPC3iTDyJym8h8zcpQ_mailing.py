@@ -8,7 +8,6 @@ from sqlalchemy.sql.sqltypes import BigInteger, Integer
 from sqlalchemy.sql.sqltypes import Boolean
 from sqlalchemy.sql.sqltypes import DateTime
 from sqlalchemy.sql.sqltypes import Float
-from sqlalchemy.sql.sqltypes import NullType
 from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
@@ -112,7 +111,7 @@ schema = {
         _Meta,
         Column(
             'id',
-            NullType(),
+            Integer(),
             primary_key=True,
             nullable=False,
         ),

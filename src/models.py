@@ -77,10 +77,18 @@ class Challenge(SQLModel, table=True):
 
 class Mailing(SQLModel, table=True):
     id: int = Field(primary_key=True, sa_column_kwargs={'autoincrement': True})
-    send_at: datetime
     message_text: str
     button_text: str
     button_url: str
+
+    challenge_id: str = Field(foreign_key='challenge.id')
+    challenge: Challenge = Relationship(
+        sa_relationship_kwargs={'lazy': 'selectin'}
+    )
+
+    @classmethod
+    async def get_all(cls, **kwargs) -> List['Mailing']:
+        return list(await cls.select().filter_by(**kwargs).all())
 
 
 class InitDataUser(BaseModel):
