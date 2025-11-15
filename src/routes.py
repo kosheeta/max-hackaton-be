@@ -22,7 +22,7 @@ from src.utils import parse_init_data_unsafe, validate_init_data
 plugin = simple_plugin()
 router = APIRouter()
 
-MAX_ERROR = 1000
+MAX_ERROR = 2000
 
 
 @Dependable
