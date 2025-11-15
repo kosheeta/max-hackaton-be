@@ -3,7 +3,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel
 from rewire_sqlmodel import SQLModel, transaction
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, Column
 from sqlmodel import Field, Relationship
 
 
@@ -56,6 +56,7 @@ class Challenge(SQLModel, table=True):
     name: str
     description: str
     scene_width: float
+    scene_height: float
 
     elements: List[ChallengeElement] = Relationship(
         cascade_delete=True,
@@ -72,6 +73,14 @@ class Challenge(SQLModel, table=True):
             return await cls.select().first()
 
         return await cls.select().where(cls.id.not_in(completed_ids)).first()
+
+
+class Mailing(SQLModel, table=True):
+    id: int = Field(sa_column=Column(primary_key=True, autoincrement=True))
+    send_at: datetime
+    message_text: str
+    button_text: str
+    button_url: str
 
 
 class InitDataUser(BaseModel):
@@ -107,6 +116,7 @@ class ChallengeResponse(BaseModel):
     id: str
     name: str
     scene_width: float
+    scene_height: float
     elements: List[ChallengeElementResponse]
 
 
