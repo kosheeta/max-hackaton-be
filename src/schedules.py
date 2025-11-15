@@ -1,6 +1,6 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from maxapi.enums.intent import Intent
-from maxapi.types import CallbackButton
+from maxapi.types import CallbackButton, LinkButton
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 from rewire import simple_plugin
 from rewire_sqlmodel import transaction, session_context
@@ -26,7 +26,7 @@ async def send_user_mailings():
             continue
 
         inline_keyboard = InlineKeyboardBuilder()
-        inline_keyboard.add(CallbackButton(
+        inline_keyboard.add(LinkButton(
             text=mailing.button_text,
             url=mailing.button_url
         ))
