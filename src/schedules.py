@@ -71,6 +71,6 @@ async def send_challenge_notifications():
 @plugin.run()
 async def start_schedules():
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(send_user_mailings, 'interval', minute=1)
+    scheduler.add_job(send_user_mailings, 'interval', minutes=1)
     scheduler.add_job(send_challenge_notifications, 'cron', hour=10, minute=0)
     scheduler.start()
