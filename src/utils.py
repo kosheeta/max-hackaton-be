@@ -1,9 +1,15 @@
 import hashlib
 import hmac
 import json
+import tempfile
 import urllib.parse
 
+from PIL import Image, ImageDraw, ImageFont
+
 from src.models import InitData
+
+CERTIFICATE_IMAGE_PATH = 'assets/certificate.png'
+FONT_FILE_PATH = 'assets/Montserrat.ttf'
 
 
 def create_app_url(bot_username: str):
@@ -54,4 +60,54 @@ def validate_init_data(init_data: InitData, bot_token: str):
 
 
 def create_certificate_image(user_name: str, user_score: float) -> str:
-    pass
+    base_image = Image.open(CERTIFICATE_IMAGE_PATH).convert('RGBA')
+    draw = ImageDraw.Draw(base_image)
+    font = ImageFont.truetype(FONT_FILE_PATH, 36)
+
+    certificate_text = (
+        f'Сертификат подтверждает, что {user_name}\n'
+        'прошёл игру “Инклюзивный конструктор” и\n'
+        'внёс вклад в создание города, удобного и\n'
+        'открытого для всех.\n\n'
+        f'Уровень доступности достигнут: {user_score:.0f}%\n'
+        'Присвоено звание: Архитектор без барьеров'
+    )
+
+    text_area_x = 164
+    text_area_y = 344
+    text_area_width = 862
+
+    raw_lines = certificate_text.split('\n')
+    final_lines = []
+
+    for raw_line in raw_lines:
+        if raw_line.strip() == '':
+            final_lines.append('')
+            continue
+
+        words = raw_line.split(' ')
+        current_line = ''
+
+        for word in words:
+            test_line = word if not current_line else current_line + ' ' + word
+            if draw.textlength(test_line, font=font) <= text_area_width:
+                current_line = test_line
+            else:
+                final_lines.append(current_line)
+                current_line = word
+
+        if current_line:
+            final_lines.append(current_line)
+
+    line_height = font.getbbox('A')[3] - font.getbbox('A')[1] + 22
+    offset_y = text_area_y
+
+    for line in final_lines:
+        if line:
+            draw.text((text_area_x, offset_y), line, font=font, fill=(0, 0, 0))
+
+        offset_y += line_height
+
+    tmp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+    base_image.save(tmp_file.name)
+    return tmp_file.name
